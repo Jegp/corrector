@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project corrector</title>
+</head>
+<body>
+
+<script type="text/javascript">
+    var socket = new WebSocket("ws://localhost:8080/assignment1");
+    var isOpen = false;
+
+    socket.onopen = function () {
+        console.log(this);
+        isOpen = true;
+    };
+
+    socket.onmessage = function (message) {
+        console.log(message);
+    };
+    socket.onerror = function () {
+        document.querySelector("#content").innerHTML = "<p>The server is not working. Go beat Jens with a stick</p>";
+    };
+
+    function submitZip(input) {
+        var tries = 0;
+        function checkAndSend() {
+            if (!isOpen && tries < 5) {
+                tries += 1;
+                setTimeout(checkAndSend, 200);
+            } else if (!isOpen) {
+                throw "Error connecting after 5 tries";
+            } else {
+                socket.send(input.files[0]);
+            }
+        }
+
+        checkAndSend()
+    }
+</script>
+
+<div id="content">
+    <input type="file" name="file" onchange="submitZip(this)">
+</div>
+</body>
+</html>

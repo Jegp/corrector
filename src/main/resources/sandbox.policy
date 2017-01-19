@@ -1,0 +1,5 @@
+grant {
+    permission java.util.PropertyPermission "*", "read,write";
+    permission java.lang.RuntimePermission "*";
+    permission java.io.FilePermission "/tmp/-", "read,write";
+};
