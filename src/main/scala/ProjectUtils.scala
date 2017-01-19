@@ -5,40 +5,14 @@ import java.util.stream.Collectors
 import net.lingala.zip4j.core.ZipFile
 import org.apache.commons.io.FileUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
 /**
-  * Utilities for handling maven projects in .zip files.
+  * File-utilities for e. g. handling maven projects and copying files to/from the maven project structure.
   */
 object ProjectUtils {
 
   private val mavenTestSource: Array[String] = Array("src", "test", "java")
-
-  /**
-    * Extracts a zip file and returns the path to the root of the extracted file tree.
-    *
-    * @return The root of the extracted zip file.
-    */
-  def extractZip(file: Path): Either[Exception, Path] = {
-    try {
-      val targetDir = Files.createTempDirectory("project")
-      new ZipFile(file.toFile).extractAll(targetDir.toString)
-      normalizeExtractedDirectory(targetDir)
-      Right(targetDir)
-    } catch {
-      case e: Exception => Left(e)
-    }
-  }
-
-  private def normalizeExtractedDirectory(root: Path): Unit = {
-    val list = Files.list(root).collect(Collectors.toList[Path])
-    // Examine if the list only contains one directory. If it does, we need to move the directory content to the root
-    if (list.size() == 1 && Files.isDirectory(list.get(0))) {
-      Files.list(list.get(0)).forEach(path => Files.move(path, root.resolve(path.getFileName)))
-      Files.delete(list.get(0)) // Delete empty directory
-    }
-  }
 
   /**
     * Copies the test sources from one maven project to another, assuming the files are in src/test/java.
@@ -63,31 +37,45 @@ object ProjectUtils {
   }
 
   /**
-    * Extracts the zip file to a directory, copies the given test sources into it and executes a function on the path.
-    * This method deletes the project folder after being run.
+    * Extracts a zip file and returns the path to the root of the extracted file tree.
     *
-    * @param zipFile  The zip file from which to extract the files.
-    * @param testPath The path to the project containing the test files to include in the current project.
-    * @param f        The function to apply on the project.
-    * @tparam T The type of the value returned from operation on the project.
-    * @return The return value of the function.
+    * @return The root of the extracted zip file.
     */
-  def extractCopyRunAndDelete[T](zipFile: Path, testPath: Path, f: Path => Future[T]): Future[T] = {
-    val future = Future {
-      extractZip(zipFile).right.map(projectPath => {
-        copyTestFiles(testPath, projectPath)
-        projectPath
-      }) match {
-        case Left(exception) => throw exception
-        case Right(path) => path
-      }
+  def extractZip(file: Path): Try[Path] = {
+    try {
+      val targetDir = Files.createTempDirectory("project")
+      new ZipFile(file.toFile).extractAll(targetDir.toString)
+      normalizeExtractedDirectory(targetDir)
+      Success(targetDir)
+    } catch {
+      case e: Exception => Failure(e)
     }
+  }
 
-    future.flatMap[T](path => {
-      val result = f(path)
-      result.onComplete(_ => org.apache.commons.io.FileUtils.deleteDirectory(path.toFile))
-      result
-    })
+  /**
+    * Determines whether the given input is a valid zip file.
+    *
+    * @param input The input path of a file or directory.
+    * @return True if the file is a valid zip file.
+    */
+  def isZip(input: Path): Boolean = {
+    new ZipFile(input.toFile).isValidZipFile
+  }
+
+  /**
+    * Makes sure the extracted directory contains all the necessary files in the immediate directory. For instance
+    * an extracted jar file with its contents in /tmp/project/maven-project-name-1.0-SNAPSHOT/ will be 'extracted' to
+    * /tmp/project/
+    *
+    * @param root The path of the root of the maven project.
+    */
+  private def normalizeExtractedDirectory(root: Path): Unit = {
+    val list = Files.list(root).collect(Collectors.toList[Path])
+    // Examine if the list only contains one directory. If it does, we need to move the directory content to the root
+    if (list.size() == 1 && Files.isDirectory(list.get(0))) {
+      Files.list(list.get(0)).forEach(path => Files.move(path, root.resolve(path.getFileName)))
+      Files.delete(list.get(0)) // Delete empty directory
+    }
   }
 
 }

@@ -2,23 +2,32 @@ import java.io.FileNotFoundException
 import java.nio.file.{Files, Paths}
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 /**
-  * Command-line entry point
+  * Command-line entry point.
   */
 object Main {
 
+  private val pmdDir = Paths.get(".").resolve("pmd")
+
+  /**
+    * Takes a maven project from and 1) performs a static code analysis on the code inside the project and 2) tests
+    * the code in the project against test-files in another project.
+    *
+    * @param args Requires the first entry to be a location of a maven project and the second entry to be the path
+    *             to a maven project which contains test files to be tested against the project inside zipped file.
+    */
   def main(args: Array[String]): Unit = {
-    if (args.length != 3) {
+    if (args.length != 2) {
       throw new IllegalArgumentException(
-        "Needs location of .jar file, location of project containing test files and pmd directory as input")
+        "Needs two inputs: the location of a maven project and the location of a maven project containing " +
+          "test files. Please see documentation.")
     }
 
-    val jarFile = Paths.get(args(0))
-    if (!Files.exists(jarFile)) {
-      throw new FileNotFoundException(jarFile.toString)
+    val input = Paths.get(args(0))
+    if (!Files.exists(input)) {
+      throw new FileNotFoundException(input.toString)
     }
 
     val sourceRoot = Paths.get(args(1))
@@ -26,39 +35,9 @@ object Main {
       throw new FileNotFoundException(sourceRoot.toString)
     }
 
-    val pmdDir = Paths.get(args(2))
-    if (!Files.isDirectory(pmdDir)) {
-      throw new FileNotFoundException(pmdDir.toString)
-    }
+    val pmdRoot = Paths.get(".").resolve("pmd")
 
-    val metricFuture = ProjectUtils.extractCopyRunAndDelete(jarFile, sourceRoot, path => ProjectProcessor(path, pmdDir))
-    println("Analysing code, please wait...")
-    val future = metricFuture.map(printMetrics)
-    Await.result(future, 4 minutes)
-  }
-
-  private def printMetrics(metrics: ProjectMetric): Unit = {
-    println(
-      s"""
-        <html>
-        <head>
-        <title>Project analyser</title>
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
-          <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
-        </head>
-        <body>
-        <div class="row">
-        <div class="col s6">
-        <h1>JUnit tests</h1>
-        <pre>${metrics.test.testResults}</pre>
-        </div>
-        <div class="col s6">
-        ${metrics.code.codeReport}
-        </div>
-        </div>
-        </body>
-        </html>
-    """.stripMargin)
+    println(Await.result(ProjectProcessor(input, sourceRoot, pmdRoot), 4 minutes).toHtml)
   }
 
 }

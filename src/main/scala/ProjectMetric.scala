@@ -4,7 +4,31 @@
   * @param code The metrics for the code quality.
   * @param test The metric for test results.
   */
-case class ProjectMetric(code: CodeMetric, test: TestMetric)
+case class ProjectMetric(code: CodeMetric, test: TestMetric) {
+
+  def toHtml: String = {
+    s"""<html>
+        <head>
+        <title>Project analyser</title>
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"></script>
+        </head>
+        <body>
+        <div class="row">
+        <div class="col s6">
+        <h1>JUnit tests</h1>
+        <pre>${test.testResults}</pre>
+        </div>
+        <div class="col s6">
+        ${code.codeReport}
+        </div>
+        </div>
+        </body>
+        </html>
+    """.stripMargin
+  }
+
+}
 
 /**
   * Metrics for code quality.
