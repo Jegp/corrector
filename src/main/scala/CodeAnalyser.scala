@@ -58,7 +58,7 @@ object CodeAnalyser {
           .mkString
 
         // Strip away surrounding <html> and <head> tags
-        out.substring(43, out.length - 15)
+        out.substring(119, out.length - 15)
       }
 
       if (process.waitFor(2, TimeUnit.MINUTES)) {

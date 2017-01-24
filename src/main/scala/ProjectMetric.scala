@@ -20,6 +20,7 @@ case class ProjectMetric(code: CodeMetric, test: TestMetric) {
         <pre>${test.testResults}</pre>
         </div>
         <div class="col s6">
+        <h1>Code analysis</h1>
         ${code.codeReport}
         </div>
         </div>
