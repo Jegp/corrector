@@ -1,5 +1,5 @@
 import java.io.FileNotFoundException
-import java.nio.file.{Files, Paths}
+import java.nio.file.{Files, Path, Paths}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -9,7 +9,7 @@ import scala.concurrent.duration._
   */
 object Main {
 
-  private val pmdDir = Paths.get(".").resolve("pmd")
+  val pmdRoot: Path = Paths.get(".").resolve("pmd").toAbsolutePath
 
   /**
     * Takes a maven project from and 1) performs a static code analysis on the code inside the project and 2) tests

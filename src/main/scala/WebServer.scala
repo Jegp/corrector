@@ -1,60 +1,85 @@
-import akka.NotUsed
+import java.nio.file.{Files, Path, Paths}
+
+import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.{Rejection, RejectionHandler}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.FileIO
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.io.{Source => IoSource}
+import scala.util.{Failure, Success}
 
 /**
-  * Created by jens on 15.01.17.
+  * Starts a webserver that can push to a service
   */
 object WebServer {
 
   private def indexHtml = IoSource.fromInputStream(WebServer.getClass.getResourceAsStream("index.html")).mkString
 
   def main(args: Array[String]): Unit = {
-    if (args.length != 2) {
-      throw new IllegalArgumentException("Need two arguments: host and port")
+    if (args.length != 4) {
+      throw new IllegalArgumentException("Need four arguments: host, port, path to test maven project and path to pmd")
     }
 
-    run(args(0), Integer.decode(args(1)))
+    run(args(0), Integer.decode(args(1)), Paths.get(args(2)), Paths.get(args(3)))
   }
 
-  def run(host: String, port: Int): Unit = {
+  def run(host: String, port: Int, sourceRoot: Path, pmdRoot: Path): Unit = {
     implicit val system = ActorSystem("hugin")
     // needed for the future flatMap/onComplete in the end
     implicit val materializer = ActorMaterializer()
 
-    // Websocket request
-    val websockeRoute = Flow[Message].flatMapConcat {
-      case bm: BinaryMessage => processProject(bm)
-      case e: Any => Source.single(TextMessage("Unknown message " + e))
-    }
+    val fileCache = FileCache()
 
     val route =
       path("") {
         get {
           complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, indexHtml))
         }
-      } ~
-        path("assignment1") {
-          handleWebSocketMessages(websockeRoute)
+      } ~ path(Remaining) { userId: String =>
+        get {
+          onComplete(fileCache.get(userId)) {
+            case Success(html) => complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, html)))
+            case Failure(error) => complete(HttpResponse(StatusCodes.NotFound))
+          }
+        } ~ put {
+          extractDataBytes { bytes =>
+            val tmpFile = Files.createTempFile("zip", null)
+            val writeFuture = bytes.runWith(FileIO.toPath(tmpFile))
+
+            // Let this run asynchronously
+            writeFuture.flatMap(result => {
+              result.status match {
+                case Success(Done) => ProjectProcessor(tmpFile, sourceRoot, pmdRoot)
+                case Failure(error) => Future.failed(error)
+              }
+            }).onComplete({
+              case Success(metric) => fileCache.put(userId, metric.toHtml)
+              case Failure(error) => fileCache.put(userId, error.toString)
+            })
+
+            onComplete(writeFuture) {
+              case Success(metric) =>
+                complete(StatusCodes.OK)
+              case Failure(error) =>
+                System.err.println(error)
+                complete(HttpResponse(StatusCodes.BadRequest, entity = error.toString))
+            }
+          }
         }
+      }
 
     val binding = Http().bindAndHandle(route, host, port)
 
     // Wait for user to press enter
     scala.io.StdIn.readLine()
+    fileCache.erase()
     binding.flatMap(_.unbind()).onComplete(_ => system.terminate())
-  }
-
-  private def processProject(message: BinaryMessage): Source[Message, NotUsed] = {
-    Source.empty
   }
 
 }
