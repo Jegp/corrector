@@ -29,37 +29,6 @@ Denotes whether comments are required (or unwanted) for specific language elemen
     </example>
   </rule>
   
-    <rule name="CommentSize"
-    		  since="5.0"
-        message="Comment is too large"
-        class="net.sourceforge.pmd.lang.java.rule.comments.CommentSizeRule"
-          externalInfoUrl="${pmd.website.baseurl}/rules/java/comments.html#CommentSize">
-    <description>
-Determines whether the dimensions of non-header comments found are within the specified limits.
-    </description>
-    <priority>3</priority>
-    <example>
-<![CDATA[
-/**
-*
-*	too many lines!
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*
-*/
-]]>
-    </example>
-  </rule>
-
   <rule name="CommentContent"
     		  since="5.0"
      message="Invalid words or phrases found"
