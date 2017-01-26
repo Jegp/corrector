@@ -12,19 +12,21 @@ import scala.util.{Failure, Success, Try}
   */
 object ProjectUtils {
 
-  private val mavenTestSource: Array[String] = Array("src", "test", "java")
+  private val sbtBuildFile = "build.sbt"
+  private val sbtTestSource: Array[String] = Array("src", "test", "scala")
 
   /**
-    * Copies the test sources from one maven project to another, assuming the files are in src/test/java.
+    * Copies the test sources and build.sbt from one sbt project to another,
+    * assuming the files are in src/test/scala.
     *
     * @param sourceProject      The source root of the test files.
     * @param destinationProject The destination root of the test file.
     */
   def copyTestFiles(sourceProject: Path, destinationProject: Path): Unit = {
-    val sourcePath = Paths.get(sourceProject.toString, mavenTestSource: _*)
-    val destinationPath = Paths.get(destinationProject.toString, mavenTestSource: _*)
+    val sourcePath = Paths.get(sourceProject.toString, sbtTestSource: _*)
+    val destinationPath = Paths.get(destinationProject.toString, sbtTestSource: _*)
     // Create directories recursively
-    mavenTestSource.foldLeft("")((toCreate, created) => {
+    sbtTestSource.foldLeft("")((toCreate, created) => {
       val newPath = if (toCreate.isEmpty) {
         created
       } else {
@@ -34,6 +36,9 @@ object ProjectUtils {
       newPath
     })
     FileUtils.copyDirectory(sourcePath.toFile, destinationPath.toFile)
+
+    // Copy build.sbt
+    FileUtils.copyFile(sourceProject.resolve(sbtBuildFile).toFile, destinationProject.resolve(sbtBuildFile).toFile)
   }
 
   /**

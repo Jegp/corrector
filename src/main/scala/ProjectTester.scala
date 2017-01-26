@@ -1,43 +1,39 @@
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.io.Source
 
 /**
-  * Compiles and loads a project into the classpath.
+  * Compiles and tests a project using Scala Build Tool sbt.
+  *
+  * The project tester assumes the sbt command is in classpath.
   */
 object ProjectTester {
 
-  private val testPrefix = "Results :"
-  private val testPostfix = "------------------------------------------------------------------------"
+  private val testPrefixRegex = "\\[info\\] [!\\+>]".r
 
   val policyFile = ProjectTester.getClass.getResource("sandbox.policy").toString
 
-  private val sandboxArgument = {
-    s"""-DargLine="-Djava.security.manager -Djava.security.policy==$policyFile""""
-  }
-
   def compileAndTest(root: Path): Future[String] = {
-    val p = new ProcessBuilder()
+    val sbtBuilder = new ProcessBuilder()
 
-    p.directory(root.toFile)
-    p.environment().put("java.security.policy", policyFile)
-    p.command("mvn", sandboxArgument, "test")
+    sbtBuilder.directory(root.toFile)
+    sbtBuilder.command("sbt", "test")
 
-    val process = p.start()
-    val output = process.getInputStream
+    val sbt = sbtBuilder.start()
+    val output = sbt.getInputStream
 
     Future {
-      val out = Source.fromInputStream(output)
-      if (process.waitFor(5, TimeUnit.MINUTES)) {
-        out.getLines()
-          .dropWhile(!_.contains(testPrefix)) // Drop prefix
-          .takeWhile(!_.contains(testPostfix)) // Drop postfix
+      if (sbt.waitFor(5, TimeUnit.MINUTES)) {
+        val out = Source.fromInputStream(output)
+        out.getLines().toSeq
+          .map(line => AnsiCodeParser.ansiRegex.replaceAllIn(line, "")) // Remove ansi codes
+          .dropWhile(line => testPrefixRegex.findFirstIn(line).isEmpty) // Drop prefix
           .mkString("\n")
       } else {
-        process.destroyForcibly()
+        sbt.destroyForcibly()
         throw new RuntimeException("Error waiting for process. Shutting down")
       }
     }

@@ -33,6 +33,10 @@ class FileCache(root: Path) {
 
 object FileCache {
 
-  def apply(): FileCache = new FileCache(Files.createTempDirectory("filecache"))
+  def apply(): FileCache = {
+    val tmp = Files.createTempDirectory("filecache")
+    Runtime.getRuntime.addShutdownHook(new Thread(() => FileUtils.deleteDirectory(tmp.toFile)))
+    new FileCache(tmp)
+  }
 
 }

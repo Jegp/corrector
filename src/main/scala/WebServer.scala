@@ -23,7 +23,7 @@ object WebServer {
 
   def main(args: Array[String]): Unit = {
     if (args.length != 4) {
-      throw new IllegalArgumentException("Need four arguments: host, port, path to test maven project and path to pmd")
+      throw new IllegalArgumentException("Need four arguments: host, port, path to test sbt projects and path to pmd")
     }
 
     run(args(0), Integer.decode(args(1)), Paths.get(args(2)), Paths.get(args(3)))
@@ -41,21 +41,27 @@ object WebServer {
         get {
           complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, indexHtml))
         }
-      } ~ path(Remaining) { userId: String =>
+      } ~ path(Remaining) { userId =>
         get {
           onComplete(fileCache.get(userId)) {
             case Success(html) => complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, html)))
             case Failure(error) => complete(HttpResponse(StatusCodes.NotFound))
           }
-        } ~ put {
+        }
+      } ~ path(Segment / Remaining) { (assignment: String, userId: String) =>
+        put {
           extractDataBytes { bytes =>
             val tmpFile = Files.createTempFile("zip", null)
             val writeFuture = bytes.runWith(FileIO.toPath(tmpFile))
 
+            // Let the user know it's being processed
+            fileCache.put(userId, s"Processing exercise $assignment... " +
+              "Go <a href=\"https://en.wikipedia.org/wiki/Special:Random\">read something random</a> while you wait")
+
             // Let this run asynchronously
             writeFuture.flatMap(result => {
               result.status match {
-                case Success(Done) => ProjectProcessor(tmpFile, sourceRoot, pmdRoot)
+                case Success(Done) => ProjectProcessor(tmpFile, sourceRoot.resolve(assignment), pmdRoot)
                 case Failure(error) => Future.failed(error)
               }
             }).onComplete({

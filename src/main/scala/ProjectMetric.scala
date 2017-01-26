@@ -16,7 +16,7 @@ case class ProjectMetric(code: CodeMetric, test: TestMetric) {
         <body>
         <div class="row">
         <div class="col s6">
-        <h1>JUnit tests</h1>
+        <h1>Property tests</h1>
         <pre>${test.testResults}</pre>
         </div>
         <div class="col s6">

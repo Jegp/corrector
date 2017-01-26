@@ -33,6 +33,9 @@ object CodeAnalyser {
   )
   // @formatter:on
 
+  val pmdWebsite = "https://pmd.github.io/pmd-5.5.2/pmd-java"
+  val pmdWebsiteRegex = """\$\{pmd.website.baseurl\}""".r
+
   /**
     * Analyse a project by running the 'pmd' tool on it.
     *
@@ -44,8 +47,13 @@ object CodeAnalyser {
     Future {
       val builder = new ProcessBuilder()
       builder.directory(root.toFile)
-      val command = Seq(pmdRoot.resolve("bin").resolve("run.sh").toString, "pmd", "-d", ".", "-language", "java", "-version", "1.8", "-f", "html", "-rulesets",
-        rulesets.map(rule => s"${pmdRoot.toString}/rulesets/java/$rule.xml").mkString(","))
+      // Set pmd website
+      val command = Seq(pmdRoot.resolve("bin").resolve("run.sh").toString, "pmd",
+        "-d", ".",
+        "-language", "java",
+        "-version", "1.8",
+        "-f", "html",
+        "-rulesets", rulesets.map(rule => s"${pmdRoot.toString}/rulesets/java/$rule.xml").mkString(","))
       builder.command(command: _*)
 
       val process = builder.start()
@@ -57,8 +65,11 @@ object CodeAnalyser {
           // Make one long string
           .mkString
 
-        // Strip away surrounding <html> and <head> tags
-        out.substring(119, out.length - 15)
+        // Strip away surrounding <html>, <head> and <h*> tags
+        val stripped = out.substring(119, out.length - 15)
+
+        // Seriously, it's easier to parse the links than read the documentation on how to set the pmd website -_-
+        pmdWebsiteRegex.replaceAllIn(stripped, pmdWebsite)
       }
 
       if (process.waitFor(2, TimeUnit.MINUTES)) {

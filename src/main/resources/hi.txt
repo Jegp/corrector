@@ -1,0 +1,18 @@
+[0m[[0minfo[0m] [0mLoading project definition from /home/jens/workspace/cphbusiness/3sem/exercisetests/ex1/project[0m
+[0m[[0minfo[0m] [0mSet current project to corrector (in build file:/home/jens/workspace/cphbusiness/3sem/exercisetests/ex1/)[0m
+210
+[0m[[0minfo[0m] [0m[31m! String.printsFourLines: Falsified after 0 passed tests.[0m[0m
+[0m[[0minfo[0m] [0m[31m! String.printsTheAlphabet: Falsified after 0 passed tests.[0m[0m
+[0m[[0minfo[0m] [0m[32m+ String.printsAsynchronously: OK, proved property.[0m[0m
+[0m[[0minfo[0m] [0m[31m! String.startsWith0: Falsified after 0 passed tests.[0m
+[0m[[0minfo[0m] [0m> ARG_0: 0[0m
+[0m[[0minfo[0m] [0m> ARG_0_ORIGINAL: 67[0m[0m
+[0m[[0minfo[0m] [0m[32m+ String.isEven: OK, passed 100 tests.[0m[0m
+[0m[[0minfo[0m] [0m[32m+ String.isConsistent: OK, passed 100 tests.[0m[0m
+[0m[[0minfo[0m] [0m[32m+ String.isConcurrent: OK, passed 100 tests.[0m[0m
+[0m[[0minfo[0m] [0mFailed: Total 7, Failed 3, Errors 0, Passed 4[0m
+[0m[[31merror[0m] [0mFailed tests:[0m
+[0m[[31merror[0m] [0m	EvenTester[0m
+[0m[[31merror[0m] [0m	PrinterTester[0m
+[0m[[31merror[0m] [0m(test:[31mtest[0m) sbt.TestsFailedException: Tests unsuccessful[0m
+[0m[[31merror[0m] [0mTotal time: 3 s, completed 26.01.2017 15:56:26[0m
