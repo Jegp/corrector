@@ -1,6 +1,8 @@
 import java.io.IOException
 import java.nio.file.{Files, Path}
 
+import org.apache.commons.io.FileUtils
+
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Random, Success}
@@ -34,7 +36,10 @@ object ProjectProcessor {
     if (ProjectUtils.isZip(input)) {
       ProjectUtils.extractZip(input) match {
         case Failure(exception) => Future.failed(new IOException("Failed to unzip project", exception))
-        case Success(path) => copyAndEvaluate(path, sourceRoot, pmdRoot)
+        case Success(path) =>
+          val evaluateFuture = copyAndEvaluate(path, sourceRoot, pmdRoot)
+          evaluateFuture.onComplete(_ => input.toFile.delete())
+          evaluateFuture
       }
     } else if (Files.isDirectory(input)) {
       copyAndEvaluate(input, sourceRoot, pmdRoot)
