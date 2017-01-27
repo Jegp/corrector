@@ -16,17 +16,15 @@ object ProjectTester {
 
   private val testPrefixRegex = "\\[info\\] [!\\+>]".r
 
-  val policyFile = ProjectTester.getClass.getResource("sandbox.policy").toString
-
   def compileAndTest(root: Path): Future[String] = {
-    val sbtBuilder = new ProcessBuilder()
-
-    sbtBuilder.directory(root.toFile)
-    sbtBuilder.command("sbt", "test")
-
-    val sbt = sbtBuilder.start()
-
     Future {
+      val sbtBuilder = new ProcessBuilder()
+
+      sbtBuilder.directory(root.toFile)
+      sbtBuilder.command("sbt", "test")
+
+      val sbt = sbtBuilder.start()
+
       // Get the lines from standard out
       val lines = Source.fromInputStream(sbt.getInputStream).getLines()
         .map(line => AnsiCodeParser.ansiRegex.replaceAllIn(line, "")) // Remove ansi codes
